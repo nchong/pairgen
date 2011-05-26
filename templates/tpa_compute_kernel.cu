@@ -119,10 +119,10 @@ __global__ void {{name}}_tpa_compute_kernel(
     {% for p in params if p.is_type('P', 'SUM') -%}
       {% if p.arity > 1 -%}
         {% for k in range(p.arity) -%}
-          {{ "%si_list[(idx*%d)+%d] = %s;" % 
+          {{ "%si_list[(idx*%d)+%d] += %s;" % 
              (p.name, p.arity, k, p.emit_assignment_i()[k]) }}
         {% endfor -%} {% else -%}
-          {{ "%si_list[idx] = %s;" % (p.name, p.emit_assignment_i()[0]) }}
+          {{ "%si_list[idx] += %s;" % (p.name, p.emit_assignment_i()[0]) }}
       {%- endif %}
     {% endfor %}
   }

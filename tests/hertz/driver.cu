@@ -80,7 +80,7 @@ void run(struct params *input, int num_iter) {
     out << "torque[" << n << "]";
     check_result_vector(
         out.str().c_str(),
-        &input->expected_torque[(n*3)], &input->force[(n*3)],
+        &input->expected_torque[(n*3)], &input->torque[(n*3)],
         epsilon, verbose, die_on_flag);
   }
 
