@@ -163,13 +163,13 @@ __device__ void hertz_pair_kernel(
     double tor3 = rinv * (delx*fs2 - dely*fs1);
 
     // this is what we've been working up to!
-    forcei_delta[0] = fx;
-    forcei_delta[1] = fy;
-    forcei_delta[2] = fz;
+    forcei_delta[0] += fx;
+    forcei_delta[1] += fy;
+    forcei_delta[2] += fz;
 
-    torquei_delta[0] = -radiusi*tor1;
-    torquei_delta[1] = -radiusi*tor2;
-    torquei_delta[2] = -radiusi*tor3;
+    torquei_delta[0] -= radiusi*tor1;
+    torquei_delta[1] -= radiusi*tor2;
+    torquei_delta[2] -= radiusi*tor3;
 
   }
 }

@@ -56,23 +56,32 @@ void run(struct params *input, int num_iter) {
     numneigh[n2]++;
   }
 
+  one_time.push_back(SimpleTimer("hertz_init"));
+  one_time.back().start();
   hertz_init(input->nnode, NSLOT, input->radius, input->mass, input->type);
+  one_time.back().stop_and_add_to_total();
 
   hertz_run(input->nnode, NSLOT, numneigh, neighidx, input->x, input->v,
       input->omega, input->force, input->torque, shear, touch);
 
   for (int n=0; n<input->nnode; n++) {
+    const double epsilon = 0.00001;
+    bool verbose = false;
+    bool die_on_flag = false;
+
     stringstream out;
     out << "force[" << n << "]";
     check_result_vector(
         out.str().c_str(),
-        &input->expected_force[(n*3)], &input->force[(n*3)]);
+        &input->expected_force[(n*3)], &input->force[(n*3)], 
+        epsilon, verbose, die_on_flag);
     out.str("");
 
     out << "torque[" << n << "]";
     check_result_vector(
         out.str().c_str(),
-        &input->expected_torque[(n*3)], &input->force[(n*3)]);
+        &input->expected_torque[(n*3)], &input->force[(n*3)],
+        epsilon, verbose, die_on_flag);
   }
 
   hertz_exit();
