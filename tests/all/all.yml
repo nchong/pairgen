@@ -1,0 +1,22 @@
+name: test
+description: one of each kind of parameter
+
+parameters:
+  - name: p_ro
+    set: P
+    access: RO
+  - name: p_rw
+    set: P
+    access: RW
+  - name: p_sum
+    set: P
+    access: SUM
+  - name: n_ro
+    set: N
+    access: RO
+  - name: n_rw
+    set: N
+    access: RW
+  - name: n_sum
+    set: N
+    access: SUM

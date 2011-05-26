@@ -1,0 +1,43 @@
+name: hertz
+description: granular potential with hertzian interactions
+
+parameters:
+  - name: x
+    type: double
+    arity: 3
+    set: P
+    access: RO
+    reload: True
+    description: position
+  - name: v
+    reload: True
+  - name: omega
+    reload: True
+  - name: radius
+    arity: 1
+  - name: mass
+    arity: 1
+  - name: type
+    type: int
+    arity: 1
+  - name: force
+    access: SUM
+  - name: torque
+    access: SUM
+  - name: shear
+    set: N
+    access: RW
+  - name: touch
+    type: int
+    arity: 1
+    set: N
+    access: RW
+
+constants:
+  - name: dt
+    description: timestep
+  - name: nktv2p
+  - name: yeff
+  - name: geff
+  - name: betaeff
+  - name: coeffFrict

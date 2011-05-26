@@ -1,0 +1,125 @@
+A PARAMETER is a tuple of:
+  name   -- string identifier,                            eg "x"
+  type   -- C++ or cuda type as string,                   eg "double"
+  arity  -- number of elements per set element,           eg 3
+  set    -- per-particle(P) or per-neighbor(N),           eg P
+  access -- read-only(RO), read-write(RW) or reduce(SUM), eg RO
+  reload -- mutates between kernel invocations,           eg True
+  id     -- additive identity,                            eg {0.0f, 0.0f, 0.0f}
+
+(set, access) = (N, SUM) is not defined
+
+pair_interaction device kernel, parameter list:
+  if set, access = P, RO:
+    <type> <name>i[arity]
+    <type> <name>j[arity]
+  elif set, access = P, RW:
+    if arity > 1:
+      <type> <name>i[arity]
+    else:
+      <type> *<name>i
+  elif set, access = P, SUM:
+    <type> <name>i_delta[arity]
+  elif set, access = N, RO:
+    <type> <name>[arity]
+  elif set, access = N, RW:
+    if arity > 1:
+      <type> <name>[arity]
+    else:
+      <type> *<name>
+
+struct particle declaration:
+  if set, access = P, RO:
+    <type> <name>[arity]
+  else:
+    error
+
+compute kernel, parameter list:
+  -- set, access = P, RO passed through struct particle *neigh
+  if set, access = P, RW:
+    <type> *<name>i_list -- list of len nparticles * arity
+  if set, access = P, SUM:
+    <type> *<name>i_list -- list of len nparticles * arity
+  elif set, access = N, RO:
+    <type> <name>_list   -- list of len nneighbors * arity
+  elif set, access = N, RW:
+    <type> <name>_list   -- list of len nneighbors * arity
+  else:
+    error
+
+compute kernel, register declaration:
+  -- same as pair_interaction device kernel, parameter list
+
+compute kernel, particle(i) load:
+  if set, access = P, RO:
+    if arity > 1:
+      for k in range(arity):
+        <name>i[k] = particle_aos[idx].<name>[k]
+    else:
+      <name>i = particle_aos[idx].<name>
+  elif set, access = P, RW:
+    if arity > 1:
+      for k in range(arity):
+        <name>i[k] = <name>_list[(idx*arity)+k]
+    else:
+      <name>i = <name>_list[idx]
+  elif set, access = P, SUM:
+    <name>i_delta = id
+  -- set = N variables are loaded at same time as particle(j)
+
+compute kernel, particle(j) load:
+  if set, access = P, RO:
+    if arity > 1:
+      for k in range(arity):
+        <name>j[k] = neigh[neigh_idx].<name>[k]
+    else:
+      <name>j = neigh[neigh_idx].<name>
+  elif set, access = P, RW|SUM:
+    error
+  elif set, access = N, RO|RW:
+    if arity > 1:
+      for k in range(arity):
+        <name>[k] = <name>_list[(neigh_idx*arity)+k]
+    else:
+      <name> = <name>_list[neigh_idx]
+
+compute kernel, pairwise call parameter list:
+  if set, access = P, RO:
+    <name>i
+    <name>j
+  elif set, access = P, RW:
+    if arity > 1:
+      <name>i
+    else:
+      &<name>i
+  elif set, access = P, SUM:
+    <name>i_delta
+  elif set, access = N, RO|RW:
+    if arity > 1:
+      <name>
+    else:
+      &<name>
+
+compute kernel, post pairwise call (still looping through jj):
+  -- update N,RW data
+  if set, access = N, RW:
+    if arity > 1:
+      for k in range(arity):
+        <name>_list[(neigh_idx*arity)+k] = <name>[k]
+    else:
+      <name>_list[neigh_idx] = <name>
+
+compute kernel, completed jj loop:
+  -- update P,RW|SUM data
+  if set, access = P, RW:
+    if arity > 1:
+      for k in range(arity):
+        <name>_list[(idx*arity)+k] = <name>i[k]
+    else:
+      <name>_list[idx] = <type> <name>i
+  elif set, access = P, SUM:
+    if arity > 1:
+      for k in range(arity):
+        <name>_list[(idx*arity)+k] = <name>i_delta[k]
+    else:
+      <name>_list[idx] = <name>i_delta
