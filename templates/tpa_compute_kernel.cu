@@ -96,7 +96,15 @@ __global__ void {{name}}_tpa_compute_kernel(
         {% endfor -%}
       );
 
-      // writeback per-neighbor RW data and per-particle RW data
+      // writeback per-particle and per-neighbor RW data
+      {% for p in params if p.is_type('P', 'RW') -%}
+        {% if p.arity > 1 -%}
+          {% for k in range(p.arity) -%}
+            {{ "%si_list[(idx*%d)+%d] = %s;" % (p.name, p.arity, k, p.emit_assignment_i()[k]) }}
+          {% endfor -%} {% else -%}
+            {{ "%si_list[idx] = %s;" % (p.name, p.arity, k, p.emit_assignment_i()[0]) }}
+        {%- endif %}
+      {% endfor %}
       {% for p in params if p.is_type('N', 'RW') -%}
         {% if p.arity > 1 -%}
           {% for k in range(p.arity) -%}
@@ -108,14 +116,6 @@ __global__ void {{name}}_tpa_compute_kernel(
     }
 
     //writeback per-particle SUM data
-    {% for p in params if p.is_type('P', 'RW') -%}
-      {% if p.arity > 1 -%}
-        {% for k in range(p.arity) -%}
-          {{ "%si_list[(idx*%d)+%d] = %s;" % (p.name, p.arity, k, p.emit_assignment_i()[k]) }}
-        {% endfor -%} {% else -%}
-          {{ "%si_list[idx] = %s;" % (p.name, p.arity, k, p.emit_assignment_i()[0]) }}
-      {%- endif %}
-    {% endfor %}
     {% for p in params if p.is_type('P', 'SUM') -%}
       {% if p.arity > 1 -%}
         {% for k in range(p.arity) -%}
