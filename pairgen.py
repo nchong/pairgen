@@ -212,7 +212,7 @@ class Parameter:
       raise Exception, "Unknown set"
 
   def sizeof_in_chars(self):
-    map = {'double' : 4 }
+    map = { 'double':8, 'int':4, 'char':1 }
     try:
       return map[self.type]
     except KeyError:

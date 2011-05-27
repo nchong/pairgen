@@ -133,6 +133,7 @@ void {{name}}_run(int N, int NSLOT,
       cudaMemcpy({{ p.device_name() }}, {{ p.emit_name(name_prefix='h_') }}, {{ p.sizeof() }}, cudaMemcpyHostToDevice));
   {% endfor %}
 
+  cudaThreadSynchronize();
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     printf("Pre-compute-kernel error: %s.\n", cudaGetErrorString(err));
@@ -152,7 +153,7 @@ void {{name}}_run(int N, int NSLOT,
   dim3 gridSize(N);
   size_t sharedMemSize = 0;
   {% for p in params if p.is_type('P', 'SUM') -%}
-    sharedMemSize += NSLOT * {{ p.sizeof_in_chars() }};
+    sharedMemSize += NSLOT * {{ p.arity }} * {{ p.sizeof_in_chars() }};
   {% endfor %}
   {{name}}_bpa_compute_kernel<<<gridSize, blockSize, sharedMemSize>>>(
     N, NSLOT, d_particle_soa, d_numneigh, d_neigh,
@@ -161,6 +162,7 @@ void {{name}}_run(int N, int NSLOT,
     {% endfor %}
   );
 #endif
+  cudaThreadSynchronize();
   err = cudaGetLastError();
   if (err != cudaSuccess) {
     printf("Post-compute-kernel error: %s.\n", cudaGetErrorString(err));
