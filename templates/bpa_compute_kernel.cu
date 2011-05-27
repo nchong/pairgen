@@ -39,7 +39,7 @@ __global__ void {{name}}_bpa_compute_kernel(
   {% set offset = 0 %}
   {% for p in params if p.is_type('P', 'SUM') -%}
     {{ p.type }} *{{ p.emit_name(name_suffix='_tmp') }} = ({{p.type}} *)&array[NSLOT*{{offset}}];
-    {{ set offset = offset + p.sizeof_in_chars() }}
+    {% set offset = offset + p.sizeof_in_chars() %}
   {% endfor %}
 
   // register copies of particle and neighbor data
