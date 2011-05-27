@@ -1,3 +1,6 @@
+#ifndef {{ name|upper }}_TPA_COMPUTE_KERNEL_H
+#define {{ name|upper }}_TPA_COMPUTE_KERNEL_H
+
 #include "{{ name }}_particle.h"
 #include "{{ name }}_pair_kernel.cu"
 
@@ -127,3 +130,5 @@ __global__ void {{name}}_tpa_compute_kernel(
     {% endfor %}
   }
 }
+
+#endif

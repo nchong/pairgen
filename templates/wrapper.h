@@ -7,6 +7,7 @@
 
 #include "{{name}}_particle.h"
 #include "{{name}}_tpa_compute_kernel.cu"
+#include "{{name}}_bpa_compute_kernel.cu"
 
 using namespace std;
 
@@ -137,6 +138,7 @@ void {{name}}_run(int N, int NSLOT,
     printf("Pre-compute-kernel error: %s.\n", cudaGetErrorString(err));
     exit(1);
   }
+#ifdef COMPUTE_TPA
   const int blockSize = 128;
   dim3 gridSize((N / blockSize)+1);
   {{name}}_tpa_compute_kernel<<<gridSize, blockSize>>>(
@@ -145,6 +147,20 @@ void {{name}}_run(int N, int NSLOT,
       {{ p.device_name() }}{{ ',' if not loop.last }}
     {% endfor %}
   );
+#else
+  const int blockSize = NSLOT;
+  dim3 gridSize(N);
+  size_t sharedMemSize = 0;
+  {% for p in params if p.is_type('P', 'SUM') -%}
+    sharedMemSize += NSLOT * {{ p.sizeof_in_chars() }};
+  {% endfor %}
+  {{name}}_bpa_compute_kernel<<<gridSize, blockSize, sharedMemSize>>>(
+    N, NSLOT, d_particle_soa, d_numneigh, d_neigh,
+    {% for p in params if not p.is_type('P', 'RO') -%}
+      {{ p.device_name() }}{{ ',' if not loop.last }}
+    {% endfor %}
+  );
+#endif
   err = cudaGetLastError();
   if (err != cudaSuccess) {
     printf("Post-compute-kernel error: %s.\n", cudaGetErrorString(err));

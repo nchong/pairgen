@@ -211,6 +211,13 @@ class Parameter:
     else:
       raise Exception, "Unknown set"
 
+  def sizeof_in_chars(self):
+    map = {'double' : 4 }
+    try:
+      return map[self.type]
+    except KeyError:
+      raise Exception, 'Unknown sizeof(%s) in chars' % (self.type)
+
 def usage():
   print "%s <params.yml>" % sys.argv[0]
 
@@ -268,6 +275,13 @@ if __name__ == '__main__':
     consts=consts, 
     kernel_call_params=kernel_call_params,
     kernel_params=kernel_params).dump(name+'_tpa_compute_kernel.cu')
+
+  template = env.get_template('bpa_compute_kernel.cu')
+  template.stream(name=name,
+    params=params,
+    consts=consts, 
+    kernel_call_params=kernel_call_params,
+    kernel_params=kernel_params).dump(name+'_bpa_compute_kernel.cu')
 
   template = env.get_template('wrapper.h')
   template.stream(name=name,
