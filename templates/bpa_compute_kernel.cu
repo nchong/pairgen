@@ -36,8 +36,10 @@ __global__ void {{name}}_bpa_compute_kernel(
   {% endfor %}
   ) {
   // block-shared arrays for summing over
+  {% set offset = 0 %}
   {% for p in params if p.is_type('P', 'SUM') -%}
-    {{ p.type }} *{{ p.emit_name(name_suffix='_tmp') }} = ({{p.type}} *)&array[{{loop.index0}}*NSLOT*{{ p.sizeof_in_chars() }}];
+    {{ p.type }} *{{ p.emit_name(name_suffix='_tmp') }} = ({{p.type}} *)&array[NSLOT*{{offset}}];
+    {{ set offset = offset + p.sizeof_in_chars() }}
   {% endfor %}
 
   // register copies of particle and neighbor data
