@@ -36,6 +36,7 @@ __global__ void {{name}}_bpa_compute_kernel(
   {% endfor %}
   ) {
   // block-shared arrays for summing over
+  // warning: these pointers must be 32-byte aligned
   {% set offset = 0 %}
   {% for p in params if p.is_type('P', 'SUM') -%}
     {{ p.type }} *{{ p.emit_name(name_suffix='_tmp') }} = ({{p.type}} *)&array[NSLOT*{{offset}}];
