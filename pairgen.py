@@ -283,6 +283,14 @@ if __name__ == '__main__':
     kernel_call_params=kernel_call_params,
     kernel_params=kernel_params).dump(name+'_bpa_compute_kernel.cu')
 
-  template = env.get_template('wrapper.h')
+  template = env.get_template('wrapper.cu')
   template.stream(name=name,
-    params=params).dump(name+'_wrapper.h')
+    params=params).dump(name+'_wrapper.cu')
+
+  template = env.get_template('pair.h')
+  template.stream(name=name,
+    params=params).dump('pair_'+name+'.h')
+
+  template = env.get_template('pair.cpp')
+  template.stream(name=name,
+    params=params).dump('pair_'+name+'.cpp')
