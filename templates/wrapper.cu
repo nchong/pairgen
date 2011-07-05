@@ -153,7 +153,7 @@ void {{name}}_run(int N, int NSLOT,
   dim3 gridSize(N);
   size_t sharedMemSize = 0;
   {% for p in params if p.is_type('P', 'SUM') -%}
-    sharedMemSize += NSLOT * {{ p.arity }} * {{ p.sizeof_in_chars() }};
+    sharedMemSize += NSLOT * {{ p.arity }} * {{ p.sizeof_in_chars() }}; // {{ p.device_name() }}
   {% endfor %}
   {{name}}_bpa_compute_kernel<<<gridSize, blockSize, sharedMemSize>>>(
     N, NSLOT, d_particle_soa, d_numneigh, d_neigh,
