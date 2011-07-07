@@ -77,6 +77,26 @@ void {{name}}_init(int N, int NSLOT,
   {% endfor -%}
 }
 
+/*
+ * (Re)fill neighbor list
+ */
+void {{name}}_update_neigh(int N, int NSLOT,
+  int *neigh_idx,
+  {% for p in params if p.is_type('P', 'RO') -%}
+    {{ p.emit_pointer_to_declaration(name_prefix='neigh_') }}{{ ',' if not loop.last }}
+  {% endfor %}
+) {
+  ASSERT_NO_CUDA_ERROR(
+    cudaMemcpy(d_neigh.idx, neigh_idx, NSLOT*N*sizeof(int), cudaMemcpyHostToDevice));
+  {% for p in params if p.is_type('P', 'RO') -%}
+    ASSERT_NO_CUDA_ERROR(
+      cudaMemcpy(d_neigh.{{p.name}},
+        {{ p.emit_name(name_prefix='neigh_') }},
+        NSLOT*N*{{ p.arity }}*sizeof({{ p.type }}),
+        cudaMemcpyHostToDevice));
+  {% endfor %}
+}
+
 void {{name}}_exit() {
   assert(d_particle_soa.idx);
   {% for p in params if p.is_type('P', 'RO') -%}

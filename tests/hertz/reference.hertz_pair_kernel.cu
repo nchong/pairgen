@@ -4,6 +4,51 @@
 
 #define sqrtFiveOverSix 0.91287092917527685576161630466800355658790782499663875
 
+#ifdef DEBUG
+#include "cuPrintf.cu"
+#define WATCHI 1
+#define DEBUG_PRINT_INPUTS(printi) {                    \
+  if (i == printi || j == printi) {                     \
+    cuPrintf("i = %d; j = %d;\n", i, j);                \
+    cuPrintf("xi = {%.16f, %.16f, %.16f}\n",            \
+        xi[0], xi[1], xi[2]);                           \
+    cuPrintf("xj = {%.16f, %.16f, %.16f}\n",            \
+        xj[0], xj[1], xj[2]);                           \
+    cuPrintf("vi = {%.16f, %.16f, %.16f}\n",            \
+        vi[0], vi[1], vi[2]);                           \
+    cuPrintf("vj = {%.16f, %.16f, %.16f}\n",            \
+        vj[0], vj[1], vj[2]);                           \
+    cuPrintf("omegai = {%.16f, %.16f, %.16f}\n",        \
+        omegai[0], omegai[1], omegai[2]);               \
+    cuPrintf("omegaj = {%.16f, %.16f, %.16f}\n",        \
+        omegaj[0], omegai[1], omegai[2]);               \
+    cuPrintf("radi = %.16f\n", radiusi);                \
+    cuPrintf("radj = %.16f\n", radiusj);                \
+    cuPrintf("massi = %.16f\n", massi);                 \
+    cuPrintf("massj = %.16f\n", massj);                 \
+    cuPrintf("typei = %d\n", typei);                    \
+    cuPrintf("typej = %d\n", typej);                    \
+    cuPrintf("forcei = {%.16f, %.16f, %.16f}\n",        \
+        forcei_delta[0], forcei_delta[1], forcei_delta[2]); \
+    cuPrintf("torquei = {%.16f, %.16f, %.16f}\n",       \
+        torquei_delta[0], torquei_delta[1], torquei_delta[2]);            \
+    cuPrintf("shear = {%.16f, %.16f, %.16f}\n",         \
+        shear[0], shear[1], shear[2]);                  \
+  }                                                     \
+} while(0);
+
+#define DEBUG_PRINT_OUTPUTS(printi) {                   \
+  if (i == printi || j == printi) {                     \
+    cuPrintf("new forcei = {%.16f, %.16f, %.16f}\n",    \
+        forcei_delta[0], forcei_delta[1], forcei_delta[2]);               \
+    cuPrintf("new torquei = {%.16f, %.16f, %.16f}\n",   \
+        torquei_delta[0], torquei_delta[1], torquei_delta[2]);            \
+    cuPrintf("shear' = {%.16f, %.16f, %.16f}\n",        \
+        shear[0], shear[1], shear[2]);                  \
+  }                                                     \
+} while(0);
+#endif
+
 /*
  * Pairwise interaction of particles i and j
  * Constants:
@@ -27,6 +72,9 @@
  * 	touch
  */
 __device__ void hertz_pair_kernel(
+#ifdef DEBUG
+  int i, int j,
+#endif
   double xi[3], 
   double xj[3], 
   double vi[3], 
@@ -58,6 +106,9 @@ __device__ void hertz_pair_kernel(
     shear[1] = 0.0;
     shear[2] = 0.0;
   } else {
+#ifdef DEBUG
+    DEBUG_PRINT_INPUTS(WATCHI);
+#endif
     //distance between centres of atoms i and j
     //or, magnitude of del vector
     double r = sqrt(rsq);
@@ -81,15 +132,16 @@ __device__ void hertz_pair_kernel(
     double vt3 = vr3 - vn3;
 
     // relative rotational velocity
-    double wr1 = (radiusi*omegai[0] + radiusj*omegaj[0]) * rinv;
-    double wr2 = (radiusi*omegai[1] + radiusj*omegaj[1]) * rinv;
-    double wr3 = (radiusi*omegai[2] + radiusj*omegaj[2]) * rinv;
+    double deltan = radsum-r;
+    double cri = radiusi-0.5*deltan;
+    double crj = radiusj-0.5*deltan;
+    double wr1 = (cri*omegai[0] + crj*omegaj[0]) * rinv;
+    double wr2 = (cri*omegai[1] + crj*omegaj[1]) * rinv;
+    double wr3 = (cri*omegai[2] + crj*omegaj[2]) * rinv;
 
     // normal forces = Hookian contact + normal velocity damping
     double meff = massi*massj/(massi+massj);
     //not-implemented: freeze_group_bit
-
-    double deltan = radsum-r;
 
     //derive contact model parameters (inlined)
     //Yeff, Geff, betaeff, coeffFrict are lookup tables
@@ -130,28 +182,33 @@ __device__ void hertz_pair_kernel(
     shear[2] -= rsht*delz;
 
     // tangential forces = shear + tangential velocity damping
-    double fs1 = - (kt*shear[0] + gammat*vtr1);
-    double fs2 = - (kt*shear[1] + gammat*vtr2);
-    double fs3 = - (kt*shear[2] + gammat*vtr3);
+    double fs1 = - (kt*shear[0]);
+    double fs2 = - (kt*shear[1]);
+    double fs3 = - (kt*shear[2]);
 
     // rescale frictional displacements and forces if needed
     double fs = sqrt(fs1*fs1 + fs2*fs2 + fs3*fs3);
     double fn = xmu * fabs(ccel*r);
-    double shrmag = 0;
+    double shrmag = sqrt(shear[0]*shear[0] +
+                         shear[1]*shear[1] +
+                         shear[2]*shear[2]);
     if (fs > fn) {
-      shrmag = sqrt(shear[0]*shear[0] +
-                    shear[1]*shear[1] +
-                    shear[2]*shear[2]);
       if (shrmag != 0.0) {
-        shear[0] = (fn/fs) * (shear[0] + gammat*vtr1/kt) - gammat*vtr1/kt;
-        shear[1] = (fn/fs) * (shear[1] + gammat*vtr2/kt) - gammat*vtr2/kt;
-        shear[2] = (fn/fs) * (shear[2] + gammat*vtr3/kt) - gammat*vtr3/kt;
         fs1 *= fn/fs;
         fs2 *= fn/fs;
         fs3 *= fn/fs;
+        shear[0] = -fs1/kt;
+        shear[1] = -fs2/kt;
+        shear[2] = -fs3/kt;
       } else {
-        fs1 = fs2 = fs3 = 0.0;
+        fs1 = 0.0;
+        fs2 = 0.0;
+        fs3 = 0.0;
       }
+    } else {
+      fs1 -= (gammat*vtr1);
+      fs2 -= (gammat*vtr2);
+      fs3 -= (gammat*vtr3);
     }
 
     double fx = delx*ccel + fs1;
@@ -167,10 +224,13 @@ __device__ void hertz_pair_kernel(
     forcei_delta[1] += fy;
     forcei_delta[2] += fz;
 
-    torquei_delta[0] -= radiusi*tor1;
-    torquei_delta[1] -= radiusi*tor2;
-    torquei_delta[2] -= radiusi*tor3;
+    torquei_delta[0] -= cri*tor1;
+    torquei_delta[1] -= cri*tor2;
+    torquei_delta[2] -= cri*tor3;
 
+#ifdef DEBUG
+    DEBUG_PRINT_OUTPUTS(WATCHI);
+#endif
   }
 }
 #endif

@@ -103,6 +103,9 @@ __global__ void {{name}}_bpa_compute_kernel(
 
     // do pairwise calculation
     {{name}}_pair_kernel(
+#ifdef DEBUG
+        idx, neigh.idx[neigh_idx],
+#endif
       {% for v in kernel_call_params -%}
         {{ v }} {%- if not loop.last %}, {% endif %}
       {% endfor -%}

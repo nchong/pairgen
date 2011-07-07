@@ -218,6 +218,13 @@ class Parameter:
     except KeyError:
       raise Exception, 'Unknown sizeof(%s) in chars' % (self.type)
 
+  def printf_format(self):
+    map = { 'double':'%.16f', 'int':'%d' }
+    try:
+      return map[self.type]
+    except KeyError:
+      raise Exception, 'Unknown printf_format(%s)' % (self.type)
+
 def usage():
   print "%s <params.yml>" % sys.argv[0]
 
