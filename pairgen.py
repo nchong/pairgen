@@ -262,42 +262,20 @@ if __name__ == '__main__':
   for c in yaml_input['constants']:
     consts.append(Constant(**c))
 
+  # process all files in 'templates/' directory
   env = Environment(loader=PackageLoader('pairgen', 'templates'))
-
-  template = env.get_template('constants.h')
-  template.stream(name=name, consts=consts).dump(name+'_constants.h')
-
-  template = env.get_template('particle.h')
-  template.stream(name=name, params=params).dump(name+'_particle.h')
-
-  template = env.get_template('pair_kernel.cu')
-  template.stream(name=name,
-    params=params,
-    consts=consts, 
-    kernel_params=kernel_params).dump(name+'_pair_kernel.cu')
-
-  template = env.get_template('tpa_compute_kernel.cu')
-  template.stream(name=name,
-    params=params,
-    consts=consts, 
-    kernel_call_params=kernel_call_params,
-    kernel_params=kernel_params).dump(name+'_tpa_compute_kernel.cu')
-
-  template = env.get_template('bpa_compute_kernel.cu')
-  template.stream(name=name,
-    params=params,
-    consts=consts, 
-    kernel_call_params=kernel_call_params,
-    kernel_params=kernel_params).dump(name+'_bpa_compute_kernel.cu')
-
-  template = env.get_template('wrapper.cu')
-  template.stream(name=name,
-    params=params).dump(name+'_wrapper.cu')
-
-  template = env.get_template('pair.h')
-  template.stream(name=name,
-    params=params).dump('pair_'+name+'.h')
-
-  template = env.get_template('pair.cpp')
-  template.stream(name=name,
-    params=params).dump('pair_'+name+'.cpp')
+  for t in env.list_templates(filter_func=(lambda x: x[0] != '.')):
+    if t == 'pair.h':
+      output = 'pair_' + name + ".h"
+    elif t == 'pair.cpp':
+      output = 'pair_' + name + ".cpp"
+    else:
+      output = name + '_' + t
+    template = env.get_template(t)
+    template.stream(
+      name=name,
+      params=params,
+      consts=consts, 
+      kernel_call_params=kernel_call_params,
+      kernel_params=kernel_params).dump(output)
+   #print t, "->", output
