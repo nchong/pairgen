@@ -20,7 +20,7 @@ void run(struct params *input, int num_iter) {
   hertz_setup_constants(dt, nktv2p, yeff, geff, betaeff, coeffFrict);
   one_time.back().stop_and_add_to_total();
 
-  int *numneigh = new int[input->nnode*NSLOT];
+  int *numneigh = new int[input->nnode];
   int *neighidx = new int[input->nnode*NSLOT];
   double *h_neigh_x = new double[input->nnode*NSLOT*3];
   double *h_neigh_v = new double[input->nnode*NSLOT*3];
@@ -30,8 +30,10 @@ void run(struct params *input, int num_iter) {
   int    *h_neigh_type = new int[input->nnode*NSLOT];
   double *shear = new double[input->nnode*NSLOT*3];
   int *touch = new int[input->nnode*NSLOT];
-  for (int i=0; i<input->nnode*NSLOT; i++) {
+  for (int i=0; i<input->nnode; i++) {
     numneigh[i] = 0;
+  }
+  for (int i=0; i<input->nnode*NSLOT; i++) {
     neighidx[i] = 0;
     shear[(i*3)+0] = 0.0f;
     shear[(i*3)+1] = 0.0f;
