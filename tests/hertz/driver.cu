@@ -39,32 +39,6 @@ void run(struct params *input, int num_iter) {
   // reset numneigh count
   // could also reset neighidx (for debug reasons?) but not necessary
   fill_n(numneigh, input->nnode, 0);
-#if 0
-  // old implementation using [(int,int)] neighbor list
-  for (int e=0; e<input->nedge; e++) {
-    int n1 = input->edge[(e*2)  ];
-    int n2 = input->edge[(e*2)+1];
-
-    assert(numneigh[n1] < NSLOT);
-    int idx = (n1*NSLOT) + numneigh[n1];
-    neighidx[idx] = n2;
-    shear[(idx*3)+0] = input->shear[(e*3)  ];
-    shear[(idx*3)+1] = input->shear[(e*3)+1];
-    shear[(idx*3)+2] = input->shear[(e*3)+2];
-    touch[idx] = 1;
-    numneigh[n1]++;
-
-    //insert the symmetric contact
-    assert(numneigh[n2] < NSLOT);
-    idx = (n2*NSLOT) + numneigh[n2];
-    neighidx[idx] = n1;
-    shear[(idx*3)+0] = input->shear[(e*3)  ];
-    shear[(idx*3)+1] = input->shear[(e*3)+1];
-    shear[(idx*3)+2] = input->shear[(e*3)+2];
-    touch[idx] = 1;
-    numneigh[n2]++;
-  }
-#else
   for (int ii=0; ii<nl->inum; ii++) {
     int i = nl->ilist[ii];
     for (int jj=0; jj<nl->numneigh[i]; jj++) {
@@ -89,7 +63,6 @@ void run(struct params *input, int num_iter) {
       numneigh[j]++;
     }
   }
-#endif
   one_time.back().stop_and_add_to_total();
 
   one_time.push_back(SimpleTimer("hertz_init"));
