@@ -103,14 +103,7 @@ void run(struct params *input, int num_iter) {
   one_time.push_back(SimpleTimer("hertz_init"));
   one_time.back().start();
   hertz_init(input->nnode, NSLOT, input->radius, input->mass, input->type);
-  hertz_update_neigh(input->nnode, NSLOT,
-    neighidx,
-    h_neigh_x,
-    h_neigh_v,
-    h_neigh_omega,
-    h_neigh_radius,
-    h_neigh_mass,
-    h_neigh_type);
+  hertz_update_neigh(input->nnode, NSLOT, numneigh, neighidx);
   one_time.back().stop_and_add_to_total();
 
   per_iter.push_back(SimpleTimer("hertz_run"));

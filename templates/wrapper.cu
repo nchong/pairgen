@@ -25,8 +25,8 @@ using namespace std;
  * GPU datastructures passed to compute_kernel
  */
 static struct particle d_particle_soa;
-static int *d_numneigh; 
-static struct particle d_neigh;
+static int *d_numneigh;
+static int *d_neighidx;
 {% for p in params if not p.is_type('P', 'RO') -%}
   static {{ p.emit_pointer_to_declaration(name_prefix='d_') }};
 {% endfor %}
@@ -44,10 +44,7 @@ void {{name}}_init(int N, int NSLOT,
     assert(d_particle_soa.{{ p.name }} == NULL);
   {% endfor %}
   assert(d_numneigh == NULL);
-  assert(d_neigh.idx == NULL);
-  {% for p in params if p.is_type('P', 'RO') -%}
-    assert(d_neigh.{{ p.name }} == NULL);
-  {% endfor %}
+  assert(d_neighidx == NULL);
   {% for p in params if not p.is_type('P', 'RO') -%}
     assert({{ p.device_name() }} == NULL);
   {% endfor %}
@@ -61,11 +58,7 @@ void {{name}}_init(int N, int NSLOT,
   ASSERT_NO_CUDA_ERROR(
     cudaMalloc((void **)&d_numneigh, N * sizeof(int)));
   ASSERT_NO_CUDA_ERROR(
-    cudaMalloc((void **)&d_neigh.idx, NSLOT*N*sizeof(int)));
-  {% for p in params if p.is_type('P', 'RO') -%}
-    ASSERT_NO_CUDA_ERROR(
-      cudaMalloc((void **)&d_neigh.{{ p.name }}, NSLOT*{{ p.sizeof() }}));
-  {% endfor %}
+    cudaMalloc((void **)&d_neighidx, NSLOT*N*sizeof(int)));
   {% for p in params if not p.is_type('P', 'RO') -%}
     ASSERT_NO_CUDA_ERROR(
       cudaMalloc((void **)&{{ p.device_name() }}, {{ p.sizeof() }}));
@@ -81,20 +74,11 @@ void {{name}}_init(int N, int NSLOT,
  * (Re)fill neighbor list
  */
 void {{name}}_update_neigh(int N, int NSLOT,
-  int *neigh_idx,
-  {% for p in params if p.is_type('P', 'RO') -%}
-    {{ p.emit_pointer_to_declaration(name_prefix='neigh_') }}{{ ',' if not loop.last }}
-  {% endfor %}
-) {
+  int *h_numneigh, int *h_neighidx) {
   ASSERT_NO_CUDA_ERROR(
-    cudaMemcpy(d_neigh.idx, neigh_idx, NSLOT*N*sizeof(int), cudaMemcpyHostToDevice));
-  {% for p in params if p.is_type('P', 'RO') -%}
-    ASSERT_NO_CUDA_ERROR(
-      cudaMemcpy(d_neigh.{{p.name}},
-        {{ p.emit_name(name_prefix='neigh_') }},
-        NSLOT*N*{{ p.arity }}*sizeof({{ p.type }}),
-        cudaMemcpyHostToDevice));
-  {% endfor %}
+    cudaMemcpy(d_numneigh, h_numneigh, N*sizeof(int), cudaMemcpyHostToDevice));
+  ASSERT_NO_CUDA_ERROR(
+    cudaMemcpy(d_neighidx, h_neighidx, NSLOT*N*sizeof(int), cudaMemcpyHostToDevice));
 }
 
 void {{name}}_exit() {
@@ -103,10 +87,7 @@ void {{name}}_exit() {
     assert(d_particle_soa.{{ p.name }});
   {% endfor %}
   assert(d_numneigh);
-  assert(d_neigh.idx);
-  {% for p in params if p.is_type('P', 'RO') -%}
-    assert(d_neigh.{{ p.name }});
-  {% endfor %}
+  assert(d_neighidx);
   {% for p in params if not p.is_type('P', 'RO') -%}
     assert({{ p.device_name() }});
   {% endfor %}
@@ -116,10 +97,7 @@ void {{name}}_exit() {
     cudaFree(d_particle_soa.{{ p.name }});
   {% endfor %}
   cudaFree(d_numneigh);
-  cudaFree(d_neigh.idx);
-  {% for p in params if p.is_type('P', 'RO') -%}
-    cudaFree(d_neigh.{{ p.name }});
-  {% endfor %}
+  cudaFree(d_neighidx);
   {% for p in params if not p.is_type('P', 'RO') -%}
     cudaFree({{ p.device_name() }});
   {% endfor %}
@@ -139,11 +117,13 @@ void {{name}}_run(int N, int NSLOT,
   {% endfor %}
   ) {
 
+#if 0
   //reload data to device
   ASSERT_NO_CUDA_ERROR(
     cudaMemcpy(d_numneigh, h_numneigh, N*sizeof(int), cudaMemcpyHostToDevice));
   ASSERT_NO_CUDA_ERROR(
-    cudaMemcpy(d_neigh.idx, h_neighidx, NSLOT*N*sizeof(int), cudaMemcpyHostToDevice));
+    cudaMemcpy(d_neighidx, h_neighidx, NSLOT*N*sizeof(int), cudaMemcpyHostToDevice));
+#endif
   {% for p in params if p.is_type('-', 'RO') and p.reload -%}
     ASSERT_NO_CUDA_ERROR(
       cudaMemcpy(d_particle_soa.{{ p.name }}, {{ p.emit_name(name_prefix='h_') }}, {{ p.sizeof() }}, cudaMemcpyHostToDevice));
@@ -163,7 +143,7 @@ void {{name}}_run(int N, int NSLOT,
   const int blockSize = 128;
   dim3 gridSize((N / blockSize)+1);
   {{name}}_tpa_compute_kernel<<<gridSize, blockSize>>>(
-    N, NSLOT, d_particle_soa, d_numneigh, d_neigh,
+    N, NSLOT, d_particle_soa, d_numneigh, d_neighidx,
     {% for p in params if not p.is_type('P', 'RO') -%}
       {{ p.device_name() }}{{ ',' if not loop.last }}
     {% endfor %}
@@ -176,7 +156,7 @@ void {{name}}_run(int N, int NSLOT,
     sharedMemSize += NSLOT * {{ p.arity }} * {{ p.sizeof_in_chars() }}; // {{ p.device_name() }}
   {% endfor %}
   {{name}}_bpa_compute_kernel<<<gridSize, blockSize, sharedMemSize>>>(
-    N, NSLOT, d_particle_soa, d_numneigh, d_neigh,
+    N, NSLOT, d_particle_soa, d_numneigh, d_neighidx,
     {% for p in params if not p.is_type('P', 'RO') -%}
       {{ p.device_name() }}{{ ',' if not loop.last }}
     {% endfor %}

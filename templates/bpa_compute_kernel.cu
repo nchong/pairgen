@@ -14,8 +14,8 @@
  *  numneigh[i] 
  *  is the number of neighbors for particle i
  *
- *  neigh.<var>[(i*NSLOT)+jj] 
- *  is the particle data of the jj-th neighbor to particle i
+ *  neighidx[(i*NSLOT)+jj] 
+ *  is the index j of the jj-th neighbor to particle i
  *
  * We assign one block per particle i.
  * We assign one thread per numneigh[i] neighbors of i.
@@ -30,7 +30,7 @@ __global__ void {{name}}_bpa_compute_kernel(
   int NSLOT, //number of data elements per particle
   struct particle particle_soa,
   int *numneigh,
-  struct particle neigh
+  int *neighidx
   {% for p in params if not p.is_type('P', 'RO') -%}
     , {{ p.emit_list_of_declaration() }} //list of length N*NSLOT*{{p.arity}}
   {% endfor %}
@@ -76,13 +76,13 @@ __global__ void {{name}}_bpa_compute_kernel(
 
     // load particle j data
     int neigh_idx = (idx*NSLOT)+jj;
-    // int j   = neigh.idx[neigh_idx];
+    int j   = neighidx[neigh_idx];
     {% for p in params if p.is_type('P', 'RO') -%}
       {% if p.arity > 1 -%}
         {% for k in range(p.arity) -%}
-          {{ "%s = neigh.%s[(neigh_idx*%d)+%d];" % (p.emit_assignment_j()[k], p.name, p.arity, k) }}
+          {{ "%s = particle_soa.%s[(j*%d)+%d];" % (p.emit_assignment_j()[k], p.name, p.arity, k) }}
         {% endfor -%} {% else -%}
-        {{ "%s = neigh.%s[neigh_idx];" % (p.emit_assignment_j()[0], p.name) }}
+        {{ "%s = particle_soa.%s[j];" % (p.emit_assignment_j()[0], p.name) }}
       {%- endif %}
     {% endfor %}
     {% for p in params if p.is_type('P', 'RW') -%}
@@ -105,7 +105,7 @@ __global__ void {{name}}_bpa_compute_kernel(
     // do pairwise calculation
     {{name}}_pair_kernel(
 #ifdef DEBUG
-        idx, neigh.idx[neigh_idx],
+        idx, j,
 #endif
       {% for v in kernel_call_params -%}
         {{ v }} {%- if not loop.last %}, {% endif %}
