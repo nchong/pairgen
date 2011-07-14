@@ -1,3 +1,4 @@
+#include "hertz_constants.cu"
 #include "hertz_wrapper.cu"
 #include "framework.h"
 #include "check_result_vector.h"

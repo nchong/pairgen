@@ -22,7 +22,7 @@ hertz_bpa: driver.cu hertz_pair_kernel.cu $(OBJ)
 %.o: %.cu
 	$(NVCC) $(NVCCFLAGS) $^ -c -o $@
 
-libpairgen.a: hertz_pair_kernel.o hertz_bpa_compute_kernel.o hertz_tpa_compute_kernel.o hertz_wrapper.o
+libpairgen.a: hertz_pair_kernel.o hertz_constants.o hertz_bpa_compute_kernel.o hertz_tpa_compute_kernel.o hertz_wrapper.o
 	ar -crusv $@ $^
 
 clean:
