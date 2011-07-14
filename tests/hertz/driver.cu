@@ -20,20 +20,27 @@ void run(struct params *input, int num_iter) {
   hertz_setup_constants(dt, nktv2p, yeff, geff, betaeff, coeffFrict);
   one_time.back().stop_and_add_to_total();
 
+  one_time.push_back(SimpleTimer("init_gpu_neighlist"));
+  one_time.back().start();
   int *numneigh = new int[input->nnode];
   int *neighidx = new int[input->nnode*NSLOT];
   double *shear = new double[input->nnode*NSLOT*3];
   int *touch = new int[input->nnode*NSLOT];
-  for (int i=0; i<input->nnode; i++) {
-    numneigh[i] = 0;
-  }
-  for (int i=0; i<input->nnode*NSLOT; i++) {
-    neighidx[i] = 0;
-    shear[(i*3)+0] = 0.0f;
-    shear[(i*3)+1] = 0.0f;
-    shear[(i*3)+2] = 0.0f;
-    touch[i] = 0;
-  }
+  fill_n(neighidx, input->nnode*NSLOT, 0);
+  fill_n(shear,    input->nnode*NSLOT*3, 0.0);
+  fill_n(touch,    input->nnode*NSLOT, 0);
+  one_time.back().stop_and_add_to_total();
+
+  // NB: Not a one_time cost.
+  // This cost is incurred everytime the neighbor list changes.
+  NeighListLike *nl = new NeighListLike(input);
+  one_time.push_back(SimpleTimer("rebuild_gpu_neighlist"));
+  one_time.back().start();
+  // reset numneigh count
+  // could also reset neighidx (for debug reasons?) but not necessary
+  fill_n(numneigh, input->nnode, 0);
+#if 0
+  // old implementation using [(int,int)] neighbor list
   for (int e=0; e<input->nedge; e++) {
     int n1 = input->edge[(e*2)  ];
     int n2 = input->edge[(e*2)+1];
@@ -57,6 +64,33 @@ void run(struct params *input, int num_iter) {
     touch[idx] = 1;
     numneigh[n2]++;
   }
+#else
+  for (int ii=0; ii<nl->inum; ii++) {
+    int i = nl->ilist[ii];
+    for (int jj=0; jj<nl->numneigh[i]; jj++) {
+      int j = nl->firstneigh[i][jj];
+      assert(numneigh[i] < NSLOT);
+      int idx = (i*NSLOT) + numneigh[i];
+      neighidx[idx] = j;
+      shear[(idx*3)+0] = nl->firstdouble[i][(jj*3)  ];
+      shear[(idx*3)+1] = nl->firstdouble[i][(jj*3)+1];
+      shear[(idx*3)+2] = nl->firstdouble[i][(jj*3)+2];
+      touch[idx] = 1;
+      numneigh[i]++;
+
+      //insert the symmetric contact
+      assert(numneigh[j] < NSLOT);
+      idx = (j*NSLOT) + numneigh[j];
+      neighidx[idx] = i;
+      shear[(idx*3)+0] = nl->firstdouble[i][(jj*3)  ];
+      shear[(idx*3)+1] = nl->firstdouble[i][(jj*3)+1];
+      shear[(idx*3)+2] = nl->firstdouble[i][(jj*3)+2];
+      touch[idx] = 1;
+      numneigh[j]++;
+    }
+  }
+#endif
+  one_time.back().stop_and_add_to_total();
 
   one_time.push_back(SimpleTimer("hertz_init"));
   one_time.back().start();
