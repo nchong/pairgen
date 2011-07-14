@@ -2,7 +2,7 @@ include ../Makefile.common
 
 OBJ = ${HERTZ_COMMONDIR}/libcommon.so
 
-all: hertz_tpa hertz_bpa
+all: hertz_tpa hertz_bpa libpairgen.a
 
 $(OBJ):
 	@if [ -z "${HERTZ_COMMONDIR}" ]; then echo "ERROR: set HERTZ_COMMONDIR env variable first."; exit 1; fi
@@ -19,5 +19,11 @@ hertz_tpa: driver.cu hertz_pair_kernel.cu $(OBJ)
 hertz_bpa: driver.cu hertz_pair_kernel.cu $(OBJ)
 	$(NVCC) $(NVCCFLAGS) -I $(INCLUDEDIR) $(filter-out hertz_pair_kernel.cu, $^)                -o $@
 
+%.o: %.cu
+	$(NVCC) $(NVCCFLAGS) $^ -c -o $@
+
+libpairgen.a: hertz_pair_kernel.o hertz_bpa_compute_kernel.o hertz_tpa_compute_kernel.o hertz_wrapper.o
+	ar -crusv $@ $^
+
 clean:
-	rm -f hertz_* hertz pair_*
+	rm -f hertz_* hertz pair_* libpairgen.a
