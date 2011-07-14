@@ -117,13 +117,6 @@ void {{name}}_run(int N, int NSLOT,
   {% endfor %}
   ) {
 
-#if 0
-  //reload data to device
-  ASSERT_NO_CUDA_ERROR(
-    cudaMemcpy(d_numneigh, h_numneigh, N*sizeof(int), cudaMemcpyHostToDevice));
-  ASSERT_NO_CUDA_ERROR(
-    cudaMemcpy(d_neighidx, h_neighidx, NSLOT*N*sizeof(int), cudaMemcpyHostToDevice));
-#endif
   {% for p in params if p.is_type('-', 'RO') and p.reload -%}
     ASSERT_NO_CUDA_ERROR(
       cudaMemcpy(d_particle_soa.{{ p.name }}, {{ p.emit_name(name_prefix='h_') }}, {{ p.sizeof() }}, cudaMemcpyHostToDevice));
