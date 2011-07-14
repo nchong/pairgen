@@ -36,32 +36,12 @@ Pair{{ name|capitalize}}::~Pair{{ name|capitalize }}() {
 }
 
 void Pair{{ name|capitalize }}::init_style() {
-  // request a full neighbor list
-  int irequest = neighbor->request(this);
-  neighbor->requests[irequest]->half = 0;
-  neighbor->requests[irequest]->full = 1;
-
-  // request a neighbor list for each per-neighbor parameter
-  {% for p in params if (p.is_type('N', 'RO') or p.is_type('N', 'RW')) and p.name != 'touch' -%}
-    // request a half neighbor list for {{ p.name }}
-    irequest = neighbor->request(this);
-    neighbor->requests[irequest]->id   = {{ loop.index }};
-    neighbor->requests[irequest]->half = 1;
-    neighbor->requests[irequest]->full = 0;
-    neighbor->requests[irequest]->dnum = {{ p.arity }};
-  {% endfor %}
+  // request a neighbor lists
 }
 
 void Pair{{ name|capitalize }}::init_list(int id, NeighList *ptr)
 {
-  if (id == 0) { //neighbor list
-    list = ptr;
-  }
-  {% for p in params if (p.is_type('N', 'RO') or p.is_type('N', 'RW')) and p.name != 'touch' -%}
-  if (id == {{ loop.index }}) {
-    {{ p.name }}_list = ptr;
-  }
-  {% endfor %}
+  // bind requested neighbor lists to local vars
 }
 
 void Pair{{ name|capitalize }}::compute(int eflag, int vflag) {

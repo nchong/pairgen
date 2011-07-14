@@ -20,7 +20,8 @@ class Pair{{ name|capitalize }} : public Pair {
     void init_style();
     void init_list(int id, NeighList *ptr);
 
-  {% for p in params if (p.is_type('N', 'RO') or p.is_type('N', 'RW')) and p.name != 'touch' -%}
+  //neighbor list for each per-neighbor parameter
+  {% for p in params if p.is_type('N', '-') -%}
     NeighList *{{ p.name }}_list;
   {% endfor %}
 
