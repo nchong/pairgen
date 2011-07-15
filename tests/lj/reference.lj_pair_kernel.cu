@@ -36,9 +36,9 @@
 /*
  * Pairwise interaction of particles i and j
  * Constants:
- * 	d_lj1 
- * 	d_lj2 
- * 	d_cutsq 
+ * 	d_lj1
+ * 	d_lj2
+ * 	d_cutsq
  * Read-Only:
  * 	xi, xj	-- position
  * 	radiusi, radiusj
@@ -50,12 +50,12 @@ __device__ void lj_pair_kernel(
 #ifdef DEBUG
     int i, int j,
 #endif
-    double xi[3], 
-    double xj[3], 
-    double radiusi, 
-    double radiusj, 
-    int typei, 
-    int typej, 
+    double xi[3],
+    double xj[3],
+    double radiusi,
+    double radiusj,
+    int typei,
+    int typej,
     double forcei_delta[3]
     ) {
   // del is the vector from j to i
