@@ -207,7 +207,7 @@ class Parameter:
     if self.set == self.Set.P:
       return "N*%d*sizeof(%s)" % (self.arity, self.type)
     elif self.set == self.Set.N:
-      return "NSLOT*N*%d*sizeof(%s)" % (self.arity, self.type)
+      return "maxpage*pgsize*%d*sizeof(%s)" % (self.arity, self.type)
     else:
       raise Exception, "Unknown set"
 

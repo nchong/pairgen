@@ -3,6 +3,7 @@
 #include "framework.h"
 #include "check_result_vector.h"
 #include "cuPrintf.cu"
+#include "decode.cu"
 #include <sstream>
 
 #define NSLOT 32
@@ -22,6 +23,29 @@ void run(struct params *input, int num_iter) {
   one_time.push_back(SimpleTimer("hertz_constants"));
   one_time.back().start();
   hertz_setup_constants(dt, nktv2p, yeff, geff, betaeff, coeffFrict);
+  one_time.back().stop_and_add_to_total();
+
+  NeighListLike *nl = new NeighListLike(input);
+  one_time.push_back(SimpleTimer("hertz_init"));
+  one_time.back().start();
+  hertz_init(
+    input->nnode, nl->maxpage, nl->pgsize,
+    input->radius, input->mass, input->type);
+  one_time.back().stop_and_add_to_total();
+
+  one_time.push_back(SimpleTimer("hertz_rebuild_neighlist"));
+  one_time.back().start();
+  hertz_update_neigh(
+    nl->numneigh, nl->firstneigh, nl->pages,
+    nl->firstdouble,
+    nl->firsttouch);
+  one_time.back().stop_and_add_to_total();
+
+#if 0
+  one_time.push_back(SimpleTimer("hertz_init"));
+  one_time.back().start();
+  hertz_init(input->nnode, NSLOT, input->radius, input->mass, input->type);
+  hertz_update_neigh(input->nnode, NSLOT, numneigh, neighidx);
   one_time.back().stop_and_add_to_total();
 
   one_time.push_back(SimpleTimer("init_gpu_neighlist"));
@@ -179,4 +203,5 @@ void run(struct params *input, int num_iter) {
   delete[] torque_copy;
   delete[] shear_copy;
   delete[] touch_copy;
+#endif
 }
